@@ -20,6 +20,7 @@
         <fillArm
             id="1"
             tipType="RUBBER_BOOT_PIT"
+            tipNodeName="SPS_fillArmCentre01"
             centreNodeName="SPS_fillArmCentre01"
             fillUnitIndex="1"
         >
