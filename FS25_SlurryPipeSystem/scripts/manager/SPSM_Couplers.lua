@@ -757,7 +757,10 @@ function SlurryPipeManager:_createCouplerVisual(nodeA, nodeB, startConnType, end
     -- log always says which visual a coupler connection got and why (William 2026-10-13).
     print(string.format("[SPS HOSE] OLD bez pipe used for coupler connection A.id=%s B.id=%s (chain involved=%s): %s",
         tostring(leadCoupling and leadCoupling.id), tostring(followCoupling and followCoupling.id), tostring(chainInvolved), reason))
-    return g_spsPipeVisual:createPipe(nodeA, nodeB, startConnType, endConnType, false, false)
+    if g_spsPipeVisual ~= nil and g_spsPipeVisual:isReady() then
+        return g_spsPipeVisual:createPipe(nodeA, nodeB, startConnType, endConnType, false, false)
+    end
+    return nil
 end
 
 -- applyConnectCouplings — called locally with the actual coupling objects.
@@ -800,7 +803,9 @@ function SlurryPipeManager:applyConnectCouplings(couplingA, couplingB, ownerA, o
     reAnchorIfNeeded(couplingA, couplingB)
     reAnchorIfNeeded(couplingB, couplingA)
 
-    if g_spsPipeVisual ~= nil and g_spsPipeVisual:isReady() then
+    if (SPSHoseVisual ~= nil and SPSHoseVisual.LIVE
+        and g_spsHoseVisual ~= nil and g_spsHoseVisual:isReady())
+    or (g_spsPipeVisual ~= nil and g_spsPipeVisual:isReady()) then
         -- Determine which coupling is the lead (start of bez pipe).
         -- Default: couplingA is lead unless couplingB is a chain terminus.
         -- Chain terminus connections: chain terminus is always the lead.
@@ -903,14 +908,17 @@ function SlurryPipeManager:applyConnectCouplings(couplingA, couplingB, ownerA, o
 
 end
 
--- [SPS MP] Create bez visuals for connect pairs that arrived before g_spsPipeVisual
+-- [SPS MP] Create visuals for connect pairs that arrived before either renderer
 -- finished its async load. Mirrors the visual-creation block in applyConnectCouplings
 -- exactly (lead/follow selection, node choice, connector visibility). Entries whose
 -- couplings are no longer connected to each other (disconnected in the meantime) or
 -- that already gained a pipeId are dropped without creating anything.
 function SlurryPipeManager:_drainPendingPipeVisuals()
     if self._pendingPipeVisuals == nil or #self._pendingPipeVisuals == 0 then return end
-    if g_spsPipeVisual == nil or not g_spsPipeVisual:isReady() then return end
+    local hoseReady = SPSHoseVisual ~= nil and SPSHoseVisual.LIVE
+        and g_spsHoseVisual ~= nil and g_spsHoseVisual:isReady()
+    local oldReady = g_spsPipeVisual ~= nil and g_spsPipeVisual:isReady()
+    if not hoseReady and not oldReady then return end
     local queue = self._pendingPipeVisuals
     self._pendingPipeVisuals = {}
     for _, e in ipairs(queue) do
