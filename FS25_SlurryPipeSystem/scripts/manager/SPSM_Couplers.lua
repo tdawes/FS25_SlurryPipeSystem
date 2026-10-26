@@ -266,13 +266,26 @@ function SlurryPipeManager:applyDockingStationState(chainNetId, isAdd)
     end
 end
 
+-- Returns the effective flow valve state for a vehicle coupling.
+-- HYDRAULIC couplings use the vehicle's cab valve; MANUAL/NONE retain
+-- their existing per-coupling valve state.
+function SlurryPipeManager:isCouplingFlowOpen(vehicle, coupling)
+    if coupling == nil then return false end
+    if coupling.valveType == SPS_VALVE_TYPE_HYDRAULIC then
+        local state = self:getVehicleState(vehicle)
+        return state ~= nil and state.valveOpen == true
+    end
+    return coupling.valveOpen == true
+end
+
 function SlurryPipeManager:hasActiveCouplingConnection(vehicle)
     for _, entry in ipairs(self.registeredVehicles) do
         if entry.vehicle == vehicle then
             for _, c in ipairs(entry.couplingEntries) do
-                if c.isConnected and c.valveOpen then return true end
+                local valveOpen = self:isCouplingFlowOpen(vehicle, c)
+                if c.isConnected and valveOpen then return true end
                 -- [SPS 1.0.1.8] physical pipe with its far end lying in the water = water intake
-                if c.valveOpen and c.physPipe ~= nil and self.physCouplingIsWaterFed ~= nil
+                if valveOpen and c.physPipe ~= nil and self.physCouplingIsWaterFed ~= nil
                    and self:physCouplingIsWaterFed(c) then return true end
             end
             return false

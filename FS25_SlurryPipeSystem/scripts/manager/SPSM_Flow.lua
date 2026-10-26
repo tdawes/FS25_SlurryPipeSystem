@@ -1239,7 +1239,7 @@ function SlurryPipeManager:updateLevelEqualise(dt)
     for _, vEntry in ipairs(self.registeredVehicles) do
         local vehA = vEntry.vehicle
         for _, c in ipairs(vEntry.couplingEntries) do
-            if c.isConnected and c.valveOpen then
+            if c.isConnected and self:isCouplingFlowOpen(vehA, c) then
                 connOpenCount = connOpenCount + 1
                 -- Resolve the far-end source for this coupling. This walks a chain
                 -- to its anchor when the partner is a chain terminus, so the same
@@ -2084,7 +2084,7 @@ function SlurryPipeManager:getPipeLengthFalloff(vehicle)
     for _, vEntry in ipairs(self.registeredVehicles) do
         if vEntry.vehicle == vehicle then
             for _, c in ipairs(vEntry.couplingEntries) do
-                if c.isConnected and c.valveOpen
+                if c.isConnected and self:isCouplingFlowOpen(vehicle, c)
                 and c.mountNode ~= nil
                 and c.connectedPartnerCoupling ~= nil
                 and c.connectedPartnerCoupling.mountNode ~= nil then
@@ -2607,7 +2607,7 @@ function SlurryPipeManager:resolveExternalSource(vehicle)
 
     -- Coupling path (pipe connected and valve open)
     for _, coupling in ipairs(entry.couplingEntries) do
-        if coupling.isConnected and coupling.valveOpen then
+        if coupling.isConnected and self:isCouplingFlowOpen(vehicle, coupling) then
             local partner = coupling.connectedPartnerCoupling
             if partner ~= nil and partner.isChainTerminus then
                 if partner.isChainStart then
@@ -2714,7 +2714,7 @@ function SlurryPipeManager:resolveExternalSource(vehicle)
     -- [SPS 1.0.1.8] Physical pipe plugged into this vehicle's slurry coupling with the chain's far end
     -- lying free in the water -> infinite WATER source (the physical twin of the strap-pipe check below).
     for _, coupling in ipairs(entry.couplingEntries) do
-        if coupling.valveOpen and not coupling.isConnected and coupling.physPipe ~= nil
+        if self:isCouplingFlowOpen(vehicle, coupling) and not coupling.isConnected and coupling.physPipe ~= nil
            and self.physFreeEndWaterPlane ~= nil then
             local waterPlane = self:physFreeEndWaterPlane(coupling)
             if waterPlane ~= nil then
@@ -2725,7 +2725,7 @@ function SlurryPipeManager:resolveExternalSource(vehicle)
 
     -- Check strap pipe free end for water (before declaring no source found)
     for _, coupling in ipairs(entry.couplingEntries) do
-        if coupling.pipeId ~= nil and coupling.valveOpen then
+        if coupling.pipeId ~= nil and self:isCouplingFlowOpen(vehicle, coupling) then
             local pipeData = self.activePipes[coupling.pipeId]
             if pipeData ~= nil then
                 -- Determine which end is the free end
